@@ -29,6 +29,7 @@ typedef NS_ENUM(NSUInteger, BSDServerErrorCode) {
 
 -(id)initOnPort: (int)port;
 -(void)echoServerListenWithDescriptor:(int)lfd;
+-(void)dataServerListenWithDescriptor:(int)lfd;
 
 @end
 

@@ -142,4 +142,47 @@
     return (n);
 }
 
+-(void)dataServerListenWithDescriptor:(int)lfd {
+    int connfd;
+    socklen_t clilen;
+    struct sockaddr_in cliaddr;
+    char buf[MAXLINE];
+    
+    for (;;) {
+        clilen = sizeof(cliaddr);
+        if ((connfd = accept(lfd, (struct sockaddr *)&cliaddr, &clilen)) < 0) {
+            if (errno != EINTR) {
+                self.errorCode = ACCEPTINGERROR;
+                NSLog(@"Error accepting connection");
+            }
+        } else {
+            self.errorCode = NOERROR;
+            NSString *connStr = [NSString stringWithFormat:@"Connection from %s, port %d", inet_ntop(AF_INET, &cliaddr.sin_addr, buf, sizeof(buf)), ntohs(cliaddr.sin_port)];
+            NSLog(@"%@", connStr);
+            
+            // Multi-thread
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+                [self getData:@(connfd)];
+            });
+        }
+        
+    }
+    
+}
+
+-(void)getData:(NSNumber *) sockfdNum {
+    ssize_t n;
+    UInt8 buf[MAXLINE];
+    NSMutableData *data = [[NSMutableData alloc] init];
+    
+    int sockfd = [sockfdNum intValue];
+    while ((n=recv(sockfd, buf, MAXLINE - 1, 0)) > 0) {
+        [data appendBytes:buf length:n];
+    }
+    close(sockfd);
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"postdata" object:data];
+    NSLog(@"Done");
+}
+
 @end
